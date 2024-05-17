@@ -207,13 +207,12 @@ def new_aggregate_info(summaries, included_types):
             final_summary[term]["summary"] = Formula([])
     
     for entry in included_types:
-        if len(summaries[term][entry.predicate_name]["atoms"]) == 0:
-            continue
-        
         terms_intersection = set()
         not_aggregable = set()
         first = True
         for term in summaries:
+            if len(summaries[term][entry.predicate_name]["atoms"]) == 0:
+                continue
             if first:
                 terms_intersection = set(map(lambda a: a[0],summaries[term][entry.predicate_name]["atoms"]))
                 not_aggregable = set(filter(lambda t: summaries[term]["terms"][t]["occurrences"] > 1, map(lambda a: a[0],summaries[term][entry.predicate_name]["atoms"])))
@@ -281,12 +280,13 @@ def summary_selector(unit:Unit, config:SummaryConfig):
     if is_a_found:
         lca_output = least_common_subsumer_tmp(entities, "IS_A")
 
-        partial_summaries, level_ranges = construct_summaries_from_lca_output(lca_output, summaries)
-        
         for term in lca_output["constants"]:
             if "terms" not in summaries[term]:
                 summaries[term]["terms"] = {}
 
+        partial_summaries, level_ranges = construct_summaries_from_lca_output(lca_output, summaries)
+        
+        for term in lca_output["constants"]:
             merge_reached_terms(summaries[term]["terms"], map(lambda sum_entry: sum_entry[0], partial_summaries[term]))
 
             summaries[term]["IS_A"] = {}

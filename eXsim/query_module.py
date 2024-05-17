@@ -102,7 +102,7 @@ def build_match_clauses_new(query: Formula, params: dict[str, str],
 
     for predicate in query.predicates:
         if predicate.type != PredicateType.TOP:
-                if DatasetManager().available_relations.get(predicate.name, False) or predicate.name == "HYPER":
+                if DatasetManager().available_relations.get(predicate.name, False):
                     if not isinstance(predicate, Predicate):
                         return None
                     
@@ -110,7 +110,7 @@ def build_match_clauses_new(query: Formula, params: dict[str, str],
 
                     if term.type == TermType.CONSTANT or term.type == TermType.AGGREGATED_TERM:
                         for name in term.name:
-                            if predicate.is_deriv:
+                            if predicate.name == "IS_A" or predicate.name == "PART_OF":
                                 if name not in query_terms["deriv_constants"]:
                                     query_terms["deriv_constants"][name] = []
                                 query_terms["deriv_constants"][name].append(predicate.name)
@@ -149,7 +149,7 @@ def build_match_clauses_new(query: Formula, params: dict[str, str],
 
         for rank_tuple in deriv_rankings:
             for predicate_name in query_terms["deriv_constants"][rank_tuple[0]]:
-                if predicate_name == "HYPER":
+                if predicate_name == "IS_A":
                     rank = rank_tuple[1]
                 else:
                     rank = rank_tuple[2]
@@ -167,7 +167,7 @@ def build_match_clauses_new(query: Formula, params: dict[str, str],
 
         for rank_tuple in deriv_rankings:
             for predicate_name in query_terms["deriv_constants"][rank_tuple[0]]:
-                if predicate_name == "HYPER":
+                if predicate_name == "IS_A":
                     rank = rank_tuple[1]
                 else:
                     rank = rank_tuple[2]
@@ -190,17 +190,14 @@ def build_match_clauses_new(query: Formula, params: dict[str, str],
         
         if minRank is not None:
             if is_predicate:
-                if minRank[0] == "HYPER":
-                    pred_name = "`IS_A`|`SUBCLASS_OF`"
+                if minRank[0] == "IS_A" or minRank[0] == "PART_OF":
+                    pred_name = f"`{minRank[0]}`*"
                 else:
                     pred_name = f"`{minRank[0]}`"
                 selected_term = "MATCH " + free_var + "-[:" + pred_name + "]->(:Synset)"
                 only_to_check_predicates.remove(minRank[0])
             else:
-                if minRank[0] == "HYPER":
-                    pred_name = "`IS_A`|`SUBCLASS_OF`*"
-                else:
-                    pred_name = f"`{minRank[0]}`*"
+                pred_name = f"`{minRank[0]}`*"
                 term_node = ("c" + str(constants_detected))
                 params[term_node] = minRank[2]
                 constants_detected += 1
@@ -215,8 +212,8 @@ def build_match_clauses_new(query: Formula, params: dict[str, str],
         constants_detected += 1
 
         for predicate_name in query_terms["constants"][term_name]:
-            if predicate_name == "HYPER":
-                pred_name = "`IS_A`|`SUBCLASS_OF`"
+            if predicate_name == "IS_A" or predicate_name == "PART_OF":
+                pred_name = f"`{predicate_name}`*"
             else:
                 pred_name = f"`{predicate_name}`"
 
@@ -231,8 +228,8 @@ def build_match_clauses_new(query: Formula, params: dict[str, str],
         first = True
 
         for predicate_name in query_terms["join_bound_vars"][term_name]:
-            if predicate_name == "HYPER":
-                pred_name = "`IS_A`|`SUBCLASS_OF`"
+            if predicate_name == "IS_A" or predicate_name == "PART_OF":
+                pred_name = f"`{predicate_name}`*"
             else:
                 pred_name = f"`{predicate_name}`"
             
@@ -270,17 +267,12 @@ def build_match_clauses_new(query: Formula, params: dict[str, str],
 
         if found_deriv <= 10:
             deriv_constants_clauses += " WITH n"
-            if predicate_name == "HYPER":
-                pred_name = "`IS_A`|`SUBCLASS_OF`*"
-            else:
-                pred_name = f"`{predicate_name}`*"
+            
+            pred_name = f"`{predicate_name}`*"
 
             deriv_constants_clauses += " WHERE n.id <> $" + term_node + " MATCH shortestPath((n)-[:" + pred_name + "]->(:Synset {id:$" + term_node + "}))"
         else:
-            if predicate_name == "HYPER":
-                pred_name = "`IS_A`>|`SUBCLASS_OF`>"
-            else:
-                pred_name = f"`{predicate_name}`>"
+            pred_name = f"`{predicate_name}`>"
 
             if pred_name not in deriv_aggr:
                 deriv_aggr[pred_name] = {}
